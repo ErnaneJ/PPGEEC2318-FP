@@ -6,7 +6,8 @@ Este repositório contém o desenvolvimento do Projeto Final da disciplina **EEC
 
 - `part 1/` — Classificação multiclasse com CNN e investigação de saídas intermediárias (hooks).
 
-## Parte 1 — Classificação Multiclasse com CNN
+## Parte-1 — Classificação Multiclasse com CNN
+Classificação de Imagens com CNNs (Intel Image Dataset)
 
 ### Objetivo
 
