@@ -1,5 +1,8 @@
-# Trabalho Final — Parte 1  
-## Classificação de Imagens com CNNs (Intel Image Dataset)
+# 🧠 Classificação de Imagens com CNNs (Intel Image Dataset)
+
+Este projeto tem como objetivo treinar e avaliar diferentes arquiteturas de Redes Neurais Convolucionais (CNNs) para a tarefa de classificação de imagens. Utilizamos o dataset "Intel Image Classification", que contém imagens de cenas naturais divididas em 6 categorias.
+
+### Autores
 
 - Ernane Ferreira Rocha Junior  
 - Quelita Míriam Nunes Ferraz
@@ -9,6 +12,7 @@
 ```bash
 part-1/
 │
+├── assets/                       # Gráficos principais 
 ├── download-dataset.py/          # Script para download automático do Intel Image Dataset 
 ├── part1_base_model.ipynb/       # Etapas do experimento, modelos e avaliações 
 └── README.md/                    # Documentação do projeto
@@ -30,7 +34,7 @@ O dataset contém cerca de 25.000 imagens coloridas com resolução padrão de 1
 O conjunto está organizado em três subconjuntos principais:
 
 ```bash
-intel-image-classification/
+dataset/intel-image-classification/
 │
 ├── seg_train/        # Dados de treino (~14.000 imagens)
 │   ├── buildings/
@@ -51,102 +55,99 @@ intel-image-classification/
 └── seg_pred/         # Dados de predição (~7.000 imagens sem rótulo)
 ```
 
----
+-----
 
-## 🔬 Etapas do Projeto
+## ⚙️ Arquiteturas dos Modelos
 
-### 🔹 1. Modelo Base (SimpleCNN)
+Foram implementadas e testadas três arquiteturas de CNN principais, com algumas variações no número de filtros.
 
-- Estrutura CNN simples com camadas convolucionais, pooling e totalmente conectadas.
-- Usado como baseline, ou seja, o resultado deste modelo é utilizado para comparações futuras para ver se houve melhora ou piora.
+### 1. SimpleCNN
 
-### 🔸 2. Modelo Base + Variações de `n_features`
+É um modelo base com uma arquitetura sequencial simples:
 
-- Experimentos com diferentes larguras de rede alterando o parâmetro `n_feature` (número de filtros).
-- Comparação dos efeitos de poucos e muitos filtros nas camadas convolucionais.
-- Objetivo desta etapa é investigar como a capacidade do modelo (o número de features que ele pode aprender) afeta a performance na acurácia.
+  * 3 blocos de `Conv2d` -> `ReLU` -> `MaxPool2d`
+  * Uma camada `Flatten` seguida por duas camadas `Linear` (`Dense`) para a classificação final.
+  * **Variações Testadas:**
+      * **Menos filtros:** Canais `(8, 16, 32)`
+      * **Base:** Canais `(16, 32, 64)`
+      * **Mais filtros:** Canais `(32, 64, 128)`
 
-### 🔹 3. Modelo Base + Blocos
+### 2. SimpleCNNWithBlocks
 
-- Utiliza a arquitetura base e adiciona blocos de regularização após as camadas de convolução.
-- Testar se técnicas de regularização poderiam combater o overfitting observado no modelo base.
+Uma evolução do modelo base, adicionando técnicas de regularização para combater o overfitting:
 
-### 🔸 4. Nosso Modelo: EfficientStrideCNN
+  * Cada bloco convolucional agora contém: `Conv2d` -> `BatchNorm2d` -> `ReLU` -> `MaxPool2d` -> `Dropout(0.25)`
+  * A camada de classificação também inclui uma camada `Dropout(0.5)`.
+  * O **Batch Normalization** (`BatchNorm2d`) ajuda a estabilizar e acelerar o treinamento, enquanto o **Dropout** desativa neurônios aleatoriamente para evitar que o modelo memorize os dados de treino.
 
-- Modelo personalizado com uso eficiente de **strides** ao invés de pooling para reduzir a dimensão dos mapas de features.
-- Otimizado para reduzir a complexidade e aumentar a performance.
-- Implementado dentro da classe `Architecture`, que permite modularidade e troca de modelos.
-- Avaliado com métricas de precisão, perda e visualização da **matriz de confusão**.
+### 3. EfficientStrideCNN
 
----
+Uma arquitetura alternativa que substitui as camadas de `MaxPool2d` por convoluções com `stride=2`. Esta é uma abordagem mais moderna para reduzir a dimensão espacial dos mapas de características.
 
-## 📊 Avaliação dos Resultados
+  * Utiliza convoluções com `kernel_size=5` e `stride=2` nas camadas iniciais.
+  * Finaliza a parte convolucional com uma camada `AdaptiveAvgPool2d`, que adapta a saída para um tamanho fixo ($1 times 1$), tornando o modelo mais flexível a diferentes tamanhos de entrada.
 
-Todos os modelos foram treinados por 10 épocas. 
+-----
 
-### Acurácia de validação e Generalização no conjunto de teste:
+## 🚀 Metodologia de Treinamento
 
-Foram treinados e avaliados quatro modelos distintos, variando a arquitetura e o número de filtros. A performance de cada modelo foi medida pela perda (loss) de validação e por um relatório de classificação detalhado ao final de 10 épocas.
+  * Foi utilizada uma classe `Architecture` para encapsular a lógica de treinamento, validação, salvamento e plotagem, garantindo reprodutibilidade.
+  * Otimizador: `Adam`.
+  * `CrossEntropyLoss`, adequada para tarefas de classificação multiclasse.
+  * Todos os modelos foram treinados por **10 épocas**.
 
-| Modelo | Val Loss | Parâmetro | Acurácia (Teste) |
-|--------|----------|-----------|------------------|
-| Menos filtros 8-16-32	| 0.5781 | 1.334.038 | 81.9% |
-| Modelo Base 16-32-64	| 0.5855 | 2.678.694 | 80.8% |
-| Modelo com Conv. Kernel 5 | 0.6428 | 5.402.566 | 79.2% |
-| Mais filtros 32-64-128 | 0.6531 | 50.726 | 78.4% |
-| Base + Blocos (BN/Dropout) | 0.7726 | 2.678.918 | 74.2% |
+### Definição da Taxa de Aprendizagem (Learning Rate Finder)
 
-- O modelo com menos filtros (8-16-32) treinou com eficiência, alcançou menor perda de validação e a maior acurácia no conjunto de testes. Isso indica que ele encontrou um ótimo equilíbrio, aprendendo os padrões necessários sem memorizar o ruído do conjunto de treino (overfitting).
+A **taxa de aprendizagem (learning rate)** é um dos hiperparâmetros mais críticos no treinamento de redes neurais. Ela controla o tamanho do passo que o otimizador dá na direção contrária ao gradiente da perda.
 
-- O aumento no número de filtros piorou a performace, causando um overfitting mais acentuado.
+  * Uma **taxa muito alta** pode fazer com que o modelo "salte" sobre o ponto de mínimo, levando a um treinamento instável ou à divergência (a perda explode).
+  * Uma **taxa muito baixa** torna o treinamento excessivamente lento e pode fazer com que o modelo fique preso em um mínimo local subótimo.
 
-- A adição de blocos de regularização após as camadas de convolução degradou significativamente a performance. Isso sugere que a regularização aplicada foi forte demais, levando o modelo a um estado de underfitting (não conseguiu aprender o suficiente nem mesmo do conjunto de treino).
+Para evitar a escolha arbitrária deste valor, utilizamos a técnica **Learning Rate Range Test**. O método consiste em treinar o modelo por um pequeno número de iterações, começando com uma taxa de aprendizagem muito baixa e aumentando-a exponencialmente a cada passo. Plotamos a perda (Loss) em função da taxa de aprendizagem (Learning Rate) para analisar o comportamento do modelo.
 
-- O modelo com kernel 5x5 apresentou um resultado intermediário. Embora seja uma técnica válida, para este problema específico não superou a abordagem mais simples e eficiente do modelo com menos filtros.
+![Learning Rate Graph](./assets/learning-rate.png)
 
-a menor perda de validação (0.5781), indicando a melhor capacidade de generalização no conjunto de teste entre os modelos avaliados. A acurácia geral deste modelo foi de 81,9%. Os modelos "Base" e "Mais filtros" apresentaram overfitting mais acentuado, como pode ser visto nos gráficos de perda, onde a perda de treinamento continua a diminuir enquanto a de validação estabiliza ou aumenta.
+**Análise da Curva:**
+O gráfico acima mostra o resultado do nosso teste. Podemos observar três fases distintas:
 
-### Análise visual com matriz de confusão:
+1.  **Região Inicial ($10^{-5}$ a ~$10^{-4}$):** A perda permanece quase constante. A taxa de aprendizagem é tão baixa que o modelo mal consegue aprender.
+2.  **Região de Queda Acentuada (~$10^{-4}$ a ~$10^{-2}$):** A perda começa a cair rapidamente. Esta é a **zona ideal** para escolher nossa taxa de aprendizagem, pois o modelo está aprendendo de forma eficiente e estável.
+3.  **Região de Explosão (após ~$10^{-2}$):** A perda atinge um valor mínimo e depois "explode", subindo drasticamente. Aqui, a taxa de aprendizagem tornou-se alta demais, desestabilizando o treinamento.
 
-Para cada um dos cinco modelos, foram gerados um relatório de classificação e uma matriz de confusão. A análise desses resultados permite uma compreensão mais profunda da performance de cada classe.
+**Resultados Obtidos e Escolha:**
+O nosso script identificou dois pontos de interesse:
 
-* Modelo "Menos filtros 8-16-32" (Melhor Performance):
+  * `Melhor LR (fundo do U): 0.004154`: O ponto onde a perda foi mínima. Usar este valor pode ser arriscado, pois está no limite da estabilidade.
+  * `LR seguro antes do fundo: 0.000527`: Um ponto seguro na região de queda acentuada.
 
-- Acurácia: 81,9%
-- Destaques: Apresentou excelente performance para a classe forest (97% de recall) e street (88% de recall). A classe com maior dificuldade de classificação foi glacier, com 74% de recall.
+Com base nesta análise, a escolha de uma taxa de aprendizagem de **`1e-3` (ou `0.001`)** para os experimentos principais é totalmente justificada. Este valor está localizado bem no centro da região de queda acentuada, garantindo um treinamento rápido e estável.
 
-* Modelo "Base + Blocos (BN/Dropout)":
+-----
 
-- Acurácia: 74,2%
-- Destaques: Este modelo, apesar da regularização com Batch Normalization e Dropout, teve a menor acurácia. Ele se destacou na classe forest (97% de recall) mas teve dificuldades com buildings (63% de recall) e mountain (59% de recall).
+## 📊 Resultados e Análise
 
-A análise visual das matrizes de confusão confirma que a classe glacier é frequentemente confundida com buildings e mountain na maioria dos modelos, indicando uma semelhança visual que dificulta a distinção pela CNN.
+Os resultados após 10 épocas de treinamento foram consolidados na tabela abaixo:
 
-### Visualização de ativação de filtros internos com hooks para compreensão interpretável da CNN
+| Modelo | Canais | Val Loss | Parâmetros |
+| :--- | :--- | :---: | ---: |
+| **Menos filtros 8-16-32** | (8, 16, 32) | **0,5781** | 1.334.038 |
+| **Base 16-32-64** | (16, 32, 64) | 0,5855 | 2.678.694 |
+| **Mais filtros 32-64-128** | (32, 64, 128) | 0,6428 | 5.402.566 |
+| **EfficientStrideCNN** | (16, 32, 64) | 0,6531 | **50.726** |
+| **Base + Blocos (BN/Dropout)** | (16, 32, 64) | 0,7726 | 2.678.918 |
 
-Para entender o que a CNN aprende em suas camadas intermediárias, foram utilizados hooks para capturar e visualizar os mapas de ativação das camadas convolucionais.
+### Análise dos Resultados:
 
-O processo consiste em:
+-  **Melhor Desempenho:** Surpreendentemente, o modelo **`SimpleCNN` com menos filtros** (`8-16-32`) obteve o menor *Validation Loss* (`0,5781`). Isso sugere que, para este dataset e com 10 épocas de treino, uma arquitetura mais simples é mais eficaz e menos propensa a overfitting.
 
-- Registrar um "gancho" (hook): Uma função é registrada em uma camada específica (ex: conv2). Essa função salva a saída da camada (os mapas de ativação) em um dicionário sempre que a rede processa uma imagem.
+-  **Overfitting é Visível:** Os gráficos dos modelos `SimpleCNN` (Base e Mais Filtros) mostram um claro sinal de **overfitting**. A perda de treino (linha azul) continua a diminuir drasticamente, enquanto a perda de validação (linha laranja) se estabiliza ou começa a aumentar por volta da 5ª época. Isso significa que o modelo está memorizando os dados de treino em vez de aprender a generalizar.
 
-- Passar um lote de imagens: Um lote de imagens é processado pelo modelo no modo de avaliação.
+-  **Eficácia da Regularização:** O modelo `Base + Blocos (BN/Dropout)` apresentou uma perda de validação maior. No entanto, seu gráfico mostra que as curvas de treino e validação estão muito mais próximas. Isso indica que o **`BatchNorm` e o `Dropout` foram eficazes em reduzir o overfitting**. Provavelmente, este modelo precisaria de mais épocas para convergir para um resultado melhor, já que a regularização torna o aprendizado mais lento e robusto.
 
-- Visualizar as ativações: Os mapas de ativação de uma imagem específica do lote são extraídos. Para cada filtro da camada, o mapa de ativação é exibido como uma imagem em tons de verde, onde áreas mais claras indicam maior ativação.
+-  **Complexidade vs. Performance:** O modelo com **`Mais filtros`** teve um desempenho pior e um número de parâmetros muito maior. Isso reforça a ideia de que "maior nem sempre é melhor". O aumento da complexidade acelerou o overfitting sem trazer ganhos de performance.
 
-Essa técnica oferece uma visão interpretável do que cada filtro está detectando. Por exemplo, alguns filtros podem se especializar em detectar bordas, texturas específicas (como folhagens ou rochas) ou formas mais complexas. As ativações do modelo "Meu Modelo com Convolução Kernel 5" foram exploradas, mostrando os diferentes features que a rede aprendeu a identificar.
+-  **Arquitetura Eficiente:** O modelo **`EfficientStrideCNN`** é notável por ter um número de parâmetros **extremamente baixo** (apenas 50 mil). Embora sua perda de validação não tenha sido a melhor, as curvas de treino e validação mostram uma tendência de queda constante, sugerindo que ele poderia se beneficiar muito de um treinamento mais longo. É uma arquitetura promissora para cenários com restrições de recursos.
 
----
+### Conclusão Final
 
-## 🧪 Execução
-
-1. Execute `download-dataset.py` para baixar o dataset.
-2. Abra o notebook `part1_base_model.ipynb`.
-3. Siga as células sequencialmente para treinar e avaliar os modelos.
-
----
-
-## 📌 Observações Finais
-
-Este projeto é parte do projeto final da disciplina Aprendizado de Máquina de Mestrado em Engenharia da Computação e Elétrica da UFRN, contendo uso do [notebook](https://github.com/ivanovitchm/PPGEEC2318) disponibilizado pelo professor para a tarefa. Tem como objetivo comparar diferentes abordagens de redes neurais convolucionais aplicadas à tarefa de classificação de imagens naturais. O modelo final reflete uma proposta autoral otimizada com base nos experimentos anteriores.
-
+Dentro de um treinamento curto (10 épocas), **arquiteturas mais simples se saíram melhor**, mas mostraram sinais claros de overfitting. Técnicas de regularização como `BatchNorm` e `Dropout` provaram ser eficazes para combater esse problema, embora possam exigir mais tempo de treinamento para atingir seu potencial máximo. A arquitetura `EfficientStrideCNN` destaca-se pela sua eficiência em número de parâmetros, sendo uma excelente opção para implantação em dispositivos com hardware limitado.
