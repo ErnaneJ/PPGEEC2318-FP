@@ -110,9 +110,9 @@ Para evitar a escolha arbitrária deste valor, utilizamos a técnica **Learning 
 **Análise da Curva:**
 O gráfico acima mostra o resultado do nosso teste. Podemos observar três fases distintas:
 
-1.  **Região Inicial ($10^{-5}$ a ~$10^{-4}$):** A perda permanece quase constante. A taxa de aprendizagem é tão baixa que o modelo mal consegue aprender.
-2.  **Região de Queda Acentuada (~$10^{-4}$ a ~$10^{-2}$):** A perda começa a cair rapidamente. Esta é a **zona ideal** para escolher nossa taxa de aprendizagem, pois o modelo está aprendendo de forma eficiente e estável.
-3.  **Região de Explosão (após ~$10^{-2}$):** A perda atinge um valor mínimo e depois "explode", subindo drasticamente. Aqui, a taxa de aprendizagem tornou-se alta demais, desestabilizando o treinamento.
+1.  **Região Inicial ($10^{-5}$ a ~ $10^{-4}$):** A perda permanece quase constante. A taxa de aprendizagem é tão baixa que o modelo mal consegue aprender.
+2.  **Região de Queda Acentuada (~ $10^{-4}$ a ~ $10^{-2}$):** A perda começa a cair rapidamente. Esta é a **zona ideal** para escolher nossa taxa de aprendizagem, pois o modelo está aprendendo de forma eficiente e estável.
+3.  **Região de Explosão (após ~ $10^{-2}$):** A perda atinge um valor mínimo e depois "explode", subindo drasticamente. Aqui, a taxa de aprendizagem tornou-se alta demais, desestabilizando o treinamento.
 
 **Resultados Obtidos e Escolha:**
 O nosso script identificou dois pontos de interesse:
